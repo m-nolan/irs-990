@@ -1,4 +1,7 @@
-from irs990lib import *
+import os
+import pandas as pd
+
+from irs990lib import get_index_row_from_ein, read_np_990_file, get_director_df, get_related_np_df, DATA_DIR
 from argparse import ArgumentParser
 
 def parse_input():
@@ -19,9 +22,14 @@ def main():
     print(f"Object ID: {ein_match_dict['OBJECT_ID']}")
     np_990_dict = read_np_990_file(ein_match_dict["OBJECT_ID"], ein_match_dict["XML_BATCH_ID"])
     np_990_director_df = get_director_df(np_990_dict)
-    dir_df_file_path = os.path.join("./",f"{ein_match_dict['TAXPAYER_NAME']} - IRS 990 {args.year}.csv")
+    np_990_schr_df = get_related_np_df(np_990_dict)     # these should probably be the methods of a 990 object...
+    dir_df_file_path = os.path.join("./", f"{ein_match_dict['TAXPAYER_NAME']} - IRS 990 {args.year} - Directors.csv")
+    schr_df_file_path = os.path.join("./", f"{ein_match_dict['TAXPAYER_NAME']} - IRS 990 {args.year} - Sch. R.csv")
     print(f"Saving director table to: {dir_df_file_path}")
-    np_990_director_df.to_csv(f"{dir_df_file_path}", index=False)
+    np_990_director_df.to_csv(dir_df_file_path, index=False)
+    if len(np_990_schr_df) > 0: 
+        print(f"Saving schedule R data (assoc. nonprofits, transactions) to: {schr_df_file_path}")
+        np_990_schr_df.to_csv(schr_df_file_path, index=False)
 
 if __name__ == "__main__":
     main()

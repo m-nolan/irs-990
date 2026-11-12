@@ -10,6 +10,18 @@ DATA_DIR = "./data"
 XBI_URL_ROOT = "https://apps.irs.gov/pub/epostcard/990/xml/" # append .../<year>/<xbi>.zip
 VERBOSE = True  # set to false in any production, maybe?
 
+class Irs990Filing:
+
+    def __init__():
+        pass
+
+    def get_director_table():
+        pass
+
+    def get_schedule_r_table():
+        pass
+
+
 def get_index_row_from_ein( index_df: pd.DataFrame, ein: int) -> dict:
     ein_index_df = index_df[index_df.EIN == ein].reset_index()
     if len(ein_index_df) > 0:
@@ -54,6 +66,23 @@ def download_xml_batch_zip( xml_batch_id: str, xbi_url_root: str = XBI_URL_ROOT,
 
 def get_director_df( np_990_dict: dict ) -> pd.DataFrame:
     return pd.DataFrame(np_990_dict["Return"]["ReturnData"]["IRS990"]["Form990PartVIISectionAGrp"]) # is there a way to do this without separate strings?
+
+def get_related_np_df( np_990_dict: dict ) -> pd.DataFrame:
+    schr_dict = np_990_dict["Return"]["ReturnData"].get("IRS990ScheduleR")
+    if schr_dict:
+        sch_r_xact_df = pd.json_normalize(np_990_dict["Return"]["ReturnData"]["IRS990ScheduleR"]['TransactionsRelatedOrgGrp'], sep="_")
+        sch_r_assoc_ent_df = pd.json_normalize(np_990_dict["Return"]["ReturnData"]["IRS990ScheduleR"]['IdRelatedTaxExemptOrgGrp'], sep="_")
+        if len(sch_r_xact_df) > 0:
+            sch_r_df = sch_r_assoc_ent_df.merge(
+                sch_r_xact_df, 
+                how="left", 
+                left_on="DisregardedEntityName_BusinessNameLine1Txt", 
+                right_on="OtherOrganizationName_BusinessNameLine1Txt"
+            ).drop(['OtherOrganizationName_BusinessNameLine1Txt'], axis=1)
+        else: sch_r_df = sch_r_assoc_ent_df
+    else:
+        sch_r_df = pd.DataFrame([])
+    return sch_r_df
 
 def main():
     pass
